@@ -1,0 +1,33 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Bet {
+  id            String   @id @default(cuid())
+  walletAddress String   @db.VarChar(64)
+  betAmount     Float
+  choice        Choice
+  result        Choice
+  outcome       Outcome
+  payout        Float
+  signature     String   @unique @db.VarChar(128)
+  createdAt     DateTime @default(now())
+
+  @@index([walletAddress, createdAt])
+  @@index([createdAt])
+}
+
+enum Choice {
+  HEADS
+  TAILS
+}
+
+enum Outcome {
+  WIN
+  LOSE
+}

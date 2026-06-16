@@ -1,0 +1,11 @@
+.next
+node_modules
+.vercel
+.env
+.env.local
+dist
+target
+.anchor
+coverage
+*.log
+prisma/dev.db

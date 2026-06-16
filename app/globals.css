@@ -1,0 +1,198 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+  --gold: #f2c94c;
+  --gold-dark: #c9952a;
+  --gold-light: #ffe08a;
+  --green: #27ae60;
+  --red: #e74c3c;
+  --bg: #0f1923;
+  --card: #1a2634;
+  --card-border: rgba(255,255,255,0.08);
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  min-height: 100vh;
+  background: var(--bg);
+  color: #e8edf4;
+  font-family: var(--font-manrope), system-ui, -apple-system, sans-serif;
+}
+
+button, input, select {
+  font: inherit;
+}
+
+/* ===== COIN 3D ANIMATION ===== */
+.coin-wrapper {
+  perspective: 800px;
+}
+
+.coin {
+  width: 160px;
+  height: 160px;
+  position: relative;
+  transform-style: preserve-3d;
+  transition: transform 0.1s;
+}
+
+.coin.flipping {
+  animation: coinFlip 1.2s ease-in-out;
+}
+
+.coin-face {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backface-visibility: hidden;
+  font-weight: 900;
+  font-size: 2.2rem;
+  letter-spacing: 0.02em;
+  border: 6px solid var(--gold-dark);
+  box-shadow:
+    inset 0 2px 8px rgba(255,255,255,0.15),
+    inset 0 -4px 12px rgba(0,0,0,0.3),
+    0 8px 32px rgba(0,0,0,0.5);
+}
+
+.coin-heads {
+  background: linear-gradient(145deg, #ffe08a 0%, #f2c94c 40%, #c9952a 100%);
+  color: #5a3a08;
+}
+
+.coin-tails {
+  background: linear-gradient(145deg, #e0e0e0 0%, #a0a0a0 40%, #707070 100%);
+  color: #2a2a2a;
+  transform: rotateY(180deg);
+}
+
+@keyframes coinFlip {
+  0% {
+    transform: rotateY(0deg) scale(1);
+  }
+  15% {
+    transform: rotateY(0deg) scale(1) translateY(-20px);
+  }
+  50% {
+    transform: rotateY(900deg) scale(1.08) translateY(-60px);
+  }
+  85% {
+    transform: rotateY(1620deg) scale(1) translateY(-10px);
+  }
+  100% {
+    transform: rotateY(1800deg) scale(1) translateY(0px);
+  }
+}
+
+@keyframes coinFlipToTails {
+  0% {
+    transform: rotateY(0deg) scale(1);
+  }
+  15% {
+    transform: rotateY(0deg) scale(1) translateY(-20px);
+  }
+  50% {
+    transform: rotateY(900deg) scale(1.08) translateY(-60px);
+  }
+  85% {
+    transform: rotateY(1620deg) scale(1) translateY(-10px);
+  }
+  100% {
+    transform: rotateY(1980deg) scale(1) translateY(0px);
+  }
+}
+
+.coin.show-heads {
+  transform: rotateY(0deg);
+}
+
+.coin.show-tails {
+  transform: rotateY(180deg);
+}
+
+.coin.flip-to-heads {
+  animation: coinFlip 1.2s ease-in-out forwards;
+}
+
+.coin.flip-to-tails {
+  animation: coinFlipToTails 1.2s ease-in-out forwards;
+}
+
+/* ===== GLOW EFFECTS ===== */
+@keyframes winGlow {
+  0%, 100% { box-shadow: 0 0 20px rgba(39,174,96,0.3); }
+  50% { box-shadow: 0 0 40px rgba(39,174,96,0.6); }
+}
+
+@keyframes loseGlow {
+  0%, 100% { box-shadow: 0 0 20px rgba(231,76,60,0.3); }
+  50% { box-shadow: 0 0 40px rgba(231,76,60,0.6); }
+}
+
+.result-win {
+  animation: winGlow 1.5s ease-in-out 2;
+}
+
+.result-lose {
+  animation: loseGlow 1.5s ease-in-out 2;
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.4s ease-out;
+}
+
+/* ===== SCROLLBAR ===== */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.12);
+  border-radius: 3px;
+}
+
+/* ===== WALLET ADAPTER OVERRIDES ===== */
+.wallet-adapter-button {
+  border-radius: 12px !important;
+  background: linear-gradient(135deg, rgba(242,201,76,0.2), rgba(201,149,42,0.15)) !important;
+  color: #f8fbff !important;
+  border: 1px solid rgba(242,201,76,0.3) !important;
+  font-family: var(--font-manrope) !important;
+  font-weight: 600 !important;
+  font-size: 0.875rem !important;
+  padding: 10px 20px !important;
+}
+
+.wallet-adapter-button:hover {
+  background: linear-gradient(135deg, rgba(242,201,76,0.35), rgba(201,149,42,0.25)) !important;
+}
+
+.wallet-adapter-button-trigger {
+  box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+}
+
+.wallet-adapter-modal-wrapper {
+  background: #1a2634 !important;
+}
