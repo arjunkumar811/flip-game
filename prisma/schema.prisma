@@ -31,3 +31,31 @@ enum Outcome {
   WIN
   LOSE
 }
+
+model SystemConfig {
+  key   String @id
+  value String
+}
+
+model Match {
+  id            String   @id @default(cuid())
+  player1Wallet String   @db.VarChar(64)
+  player2Wallet String?  @db.VarChar(64)
+  betAmount     Float
+  player1Choice Choice
+  player2Choice Choice?
+  result        Choice?
+  status        MatchStatus @default(WAITING)
+  totalPool     Float?
+  platformFee   Float?
+  payout        Float?
+  winnerWallet  String?  @db.VarChar(64)
+  createdAt     DateTime @default(now())
+  completedAt   DateTime?
+}
+
+enum MatchStatus {
+  WAITING
+  COMPLETED
+  CANCELLED
+}
