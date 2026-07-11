@@ -2,54 +2,76 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  color-scheme: dark;
-  --gold: #f2c94c;
-  --gold-dark: #c9952a;
-  --gold-light: #ffe08a;
-  --green: #27ae60;
-  --red: #e74c3c;
-  --bg: #0f1923;
-  --card: #1a2634;
-  --card-border: rgba(255,255,255,0.08);
+@layer base {
+  :root {
+    --bg-main: #06080d;
+    --bg-card: rgba(15, 23, 42, 0.65);
+    --gold: #f59e0b;
+    --gold-light: #fbbf24;
+    --gold-glow: rgba(245, 158, 11, 0.35);
+    --silver: #94a3b8;
+    --silver-light: #e2e8f0;
+    --silver-glow: rgba(148, 163, 184, 0.35);
+    --emerald: #10b981;
+    --rose: #f43f5e;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  body {
+    background-color: var(--bg-main);
+    color: #f8fafc;
+    font-family: var(--font-space-grotesk), var(--font-manrope), system-ui, -apple-system, sans-serif;
+    overflow-x: hidden;
+    min-height: 100vh;
+    background-image:
+      radial-gradient(circle at 15% 20%, rgba(245, 158, 11, 0.08) 0%, transparent 45%),
+      radial-gradient(circle at 85% 80%, rgba(56, 189, 248, 0.08) 0%, transparent 45%),
+      radial-gradient(circle at 50% 50%, rgba(16, 185, 129, 0.04) 0%, transparent 60%);
+  }
 }
 
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
+/* Glassmorphism Panels */
+.glass-panel {
+  background: rgba(15, 23, 42, 0.7);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-html {
-  scroll-behavior: smooth;
+.glass-panel-gold {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.12) 0%, rgba(15, 23, 42, 0.75) 100%);
+  border: 1px solid rgba(245, 158, 11, 0.25);
+  box-shadow: 0 8px 32px rgba(245, 158, 11, 0.12);
 }
 
-body {
-  min-height: 100vh;
-  background: var(--bg);
-  color: #e8edf4;
-  font-family: var(--font-manrope), system-ui, -apple-system, sans-serif;
+.glass-panel-silver {
+  background: linear-gradient(135deg, rgba(148, 163, 184, 0.12) 0%, rgba(15, 23, 42, 0.75) 100%);
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  box-shadow: 0 8px 32px rgba(148, 163, 184, 0.12);
 }
 
-button, input, select {
-  font: inherit;
+/* ===== 3D COIN STYLING & ANIMATIONS ===== */
+.coin-container {
+  perspective: 1200px;
 }
 
-/* ===== COIN 3D ANIMATION ===== */
-.coin-wrapper {
-  perspective: 800px;
-}
-
-.coin {
-  width: 160px;
-  height: 160px;
+.coin-3d {
+  width: 220px;
+  height: 220px;
   position: relative;
   transform-style: preserve-3d;
-  transition: transform 0.1s;
+  transition: transform 0.15s ease-out;
+  cursor: pointer;
 }
 
-.coin.flipping {
-  animation: coinFlip 1.2s ease-in-out;
+@media (min-width: 768px) {
+  .coin-3d {
+    width: 260px;
+    height: 260px;
+  }
 }
 
 .coin-face {
@@ -57,142 +79,151 @@ button, input, select {
   inset: 0;
   border-radius: 50%;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   backface-visibility: hidden;
-  font-weight: 900;
-  font-size: 2.2rem;
-  letter-spacing: 0.02em;
-  border: 6px solid var(--gold-dark);
+  -webkit-backface-visibility: hidden;
+  user-select: none;
+  overflow: hidden;
+}
+
+/* HEADS FACE - GOLD CROWN LUXURY */
+.coin-face-heads {
+  background:
+    radial-gradient(circle at 35% 35%, #fffef0 0%, #fbbf24 35%, #d97706 75%, #78350f 100%);
+  border: 8px solid #f59e0b;
   box-shadow:
-    inset 0 2px 8px rgba(255,255,255,0.15),
-    inset 0 -4px 12px rgba(0,0,0,0.3),
-    0 8px 32px rgba(0,0,0,0.5);
-}
-
-.coin-heads {
-  background: linear-gradient(145deg, #ffe08a 0%, #f2c94c 40%, #c9952a 100%);
-  color: #5a3a08;
-}
-
-.coin-tails {
-  background: linear-gradient(145deg, #e0e0e0 0%, #a0a0a0 40%, #707070 100%);
-  color: #2a2a2a;
-  transform: rotateY(180deg);
-}
-
-@keyframes coinFlip {
-  0% {
-    transform: rotateY(0deg) scale(1);
-  }
-  15% {
-    transform: rotateY(0deg) scale(1) translateY(-20px);
-  }
-  50% {
-    transform: rotateY(900deg) scale(1.08) translateY(-60px);
-  }
-  85% {
-    transform: rotateY(1620deg) scale(1) translateY(-10px);
-  }
-  100% {
-    transform: rotateY(1800deg) scale(1) translateY(0px);
-  }
-}
-
-@keyframes coinFlipToTails {
-  0% {
-    transform: rotateY(0deg) scale(1);
-  }
-  15% {
-    transform: rotateY(0deg) scale(1) translateY(-20px);
-  }
-  50% {
-    transform: rotateY(900deg) scale(1.08) translateY(-60px);
-  }
-  85% {
-    transform: rotateY(1620deg) scale(1) translateY(-10px);
-  }
-  100% {
-    transform: rotateY(1980deg) scale(1) translateY(0px);
-  }
-}
-
-.coin.show-heads {
+    inset 0 4px 14px rgba(255, 255, 255, 0.6),
+    inset 0 -6px 16px rgba(0, 0, 0, 0.45),
+    0 12px 35px rgba(245, 158, 11, 0.35);
   transform: rotateY(0deg);
 }
 
-.coin.show-tails {
+/* INNER RING RIM DECORATION */
+.coin-rim {
+  position: absolute;
+  inset: 12px;
+  border-radius: 50%;
+  border: 2px dashed rgba(255, 255, 255, 0.35);
+  pointer-events: none;
+}
+
+/* TAILS FACE - PLATINUM SHIELD LUXURY */
+.coin-face-tails {
+  background:
+    radial-gradient(circle at 35% 35%, #ffffff 0%, #cbd5e1 35%, #64748b 75%, #334155 100%);
+  border: 8px solid #94a3b8;
+  box-shadow:
+    inset 0 4px 14px rgba(255, 255, 255, 0.7),
+    inset 0 -6px 16px rgba(0, 0, 0, 0.45),
+    0 12px 35px rgba(148, 163, 184, 0.35);
   transform: rotateY(180deg);
 }
 
-.coin.flip-to-heads {
-  animation: coinFlip 1.2s ease-in-out forwards;
+/* REALISTIC 3D FLIP TRAJECTORY ANIMATIONS */
+@keyframes flipTrajectoryHeads {
+  0% {
+    transform: rotateY(0deg) rotateX(0deg) scale(1) translateY(0px);
+  }
+  20% {
+    transform: rotateY(360deg) rotateX(25deg) scale(1.15) translateY(-90px);
+  }
+  50% {
+    transform: rotateY(1080deg) rotateX(-15deg) scale(1.22) translateY(-130px);
+  }
+  80% {
+    transform: rotateY(1800deg) rotateX(10deg) scale(1.1) translateY(-40px);
+  }
+  92% {
+    transform: rotateY(2160deg) rotateX(-4deg) scale(0.97) translateY(8px);
+  }
+  100% {
+    transform: rotateY(2160deg) rotateX(0deg) scale(1) translateY(0px);
+  }
 }
 
-.coin.flip-to-tails {
-  animation: coinFlipToTails 1.2s ease-in-out forwards;
+@keyframes flipTrajectoryTails {
+  0% {
+    transform: rotateY(0deg) rotateX(0deg) scale(1) translateY(0px);
+  }
+  20% {
+    transform: rotateY(360deg) rotateX(25deg) scale(1.15) translateY(-90px);
+  }
+  50% {
+    transform: rotateY(1080deg) rotateX(-15deg) scale(1.22) translateY(-130px);
+  }
+  80% {
+    transform: rotateY(1800deg) rotateX(10deg) scale(1.1) translateY(-40px);
+  }
+  92% {
+    transform: rotateY(2340deg) rotateX(-4deg) scale(0.97) translateY(8px);
+  }
+  100% {
+    transform: rotateY(2340deg) rotateX(0deg) scale(1) translateY(0px);
+  }
 }
 
-/* ===== GLOW EFFECTS ===== */
-@keyframes winGlow {
-  0%, 100% { box-shadow: 0 0 20px rgba(39,174,96,0.3); }
-  50% { box-shadow: 0 0 40px rgba(39,174,96,0.6); }
+.anim-flip-heads {
+  animation: flipTrajectoryHeads 1.6s cubic-bezier(0.2, 0.8, 0.3, 1) forwards;
 }
 
-@keyframes loseGlow {
-  0%, 100% { box-shadow: 0 0 20px rgba(231,76,60,0.3); }
-  50% { box-shadow: 0 0 40px rgba(231,76,60,0.6); }
+.anim-flip-tails {
+  animation: flipTrajectoryTails 1.6s cubic-bezier(0.2, 0.8, 0.3, 1) forwards;
 }
 
-.result-win {
-  animation: winGlow 1.5s ease-in-out 2;
+.coin-idle-float {
+  animation: coinFloat 4s ease-in-out infinite;
 }
 
-.result-lose {
-  animation: loseGlow 1.5s ease-in-out 2;
+@keyframes coinFloat {
+  0%, 100% {
+    transform: translateY(0px) rotateY(0deg);
+  }
+  50% {
+    transform: translateY(-10px) rotateY(12deg);
+  }
 }
 
-@keyframes fadeInUp {
-  from { opacity: 0; transform: translateY(16px); }
-  to { opacity: 1; transform: translateY(0); }
+/* Glow Pulses */
+@keyframes winPulse {
+  0%, 100% {
+    box-shadow: 0 0 25px rgba(16, 185, 129, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 60px rgba(16, 185, 129, 0.85);
+  }
 }
 
-.animate-fade-in-up {
-  animation: fadeInUp 0.4s ease-out;
+@keyframes losePulse {
+  0%, 100% {
+    box-shadow: 0 0 25px rgba(244, 63, 94, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 50px rgba(244, 63, 94, 0.65);
+  }
 }
 
-/* ===== SCROLLBAR ===== */
+.glow-win {
+  animation: winPulse 1.5s ease-in-out 2;
+}
+
+.glow-lose {
+  animation: losePulse 1.5s ease-in-out 2;
+}
+
+/* Custom Scrollbar */
 ::-webkit-scrollbar {
-  width: 6px;
+  width: 8px;
+  height: 8px;
 }
 ::-webkit-scrollbar-track {
-  background: transparent;
+  background: rgba(15, 23, 42, 0.6);
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(255,255,255,0.12);
-  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 4px;
 }
-
-/* ===== WALLET ADAPTER OVERRIDES ===== */
-.wallet-adapter-button {
-  border-radius: 12px !important;
-  background: linear-gradient(135deg, rgba(242,201,76,0.2), rgba(201,149,42,0.15)) !important;
-  color: #f8fbff !important;
-  border: 1px solid rgba(242,201,76,0.3) !important;
-  font-family: var(--font-manrope) !important;
-  font-weight: 600 !important;
-  font-size: 0.875rem !important;
-  padding: 10px 20px !important;
-}
-
-.wallet-adapter-button:hover {
-  background: linear-gradient(135deg, rgba(242,201,76,0.35), rgba(201,149,42,0.25)) !important;
-}
-
-.wallet-adapter-button-trigger {
-  box-shadow: 0 4px 16px rgba(0,0,0,0.3);
-}
-
-.wallet-adapter-modal-wrapper {
-  background: #1a2634 !important;
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
 }

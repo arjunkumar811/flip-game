@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { Manrope, Space_Grotesk } from "next/font/google";
-import { AppProviders } from "@/components/providers/app-providers";
 import "./globals.css";
 
 const display = Space_Grotesk({
@@ -14,9 +13,9 @@ const body = Manrope({
 });
 
 export const metadata: Metadata = {
-  title: "Coin Flip – Pick a Side & Flip",
+  title: "AETHER FLIP | Provably Fair Coin Flip Arena",
   description:
-    "A clean, single-page Solana coin flip game. Connect wallet, pick a side, and flip!",
+    "Pick Heads or Tails, flip the 3D coin, and double your money instantly or keep nothing. Features real-time physics, audio synthesis, and provably fair verification.",
 };
 
 export default function RootLayout({
@@ -25,9 +24,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
-      <body className={`${display.variable} ${body.variable} font-body antialiased`}>
-        <AppProviders>{children}</AppProviders>
+    <html lang="en" className="dark">
+      <body className={`${display.variable} ${body.variable} font-body antialiased min-h-screen selection:bg-amber-500 selection:text-black`}>
+        {children}
       </body>
     </html>
   );
