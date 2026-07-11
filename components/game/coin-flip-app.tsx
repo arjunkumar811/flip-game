@@ -12,7 +12,8 @@ import {
   Sparkles,
   Crown,
   HelpCircle,
-  TrendingUp,
+  Landmark,
+  ShieldCheck,
 } from "lucide-react";
 
 import { Coin3D, type Choice, type Outcome } from "./coin-3d";
@@ -20,10 +21,16 @@ import { FlipControls } from "./flip-controls";
 import { FlipHistory, type FlipRecord } from "./flip-history";
 import { soundEngine } from "./sound-utils";
 
+interface HouseState {
+  bankroll: number;
+  minBet: number;
+  maxBet: number;
+}
+
 export function CoinFlipApp() {
-  // Game State
+  // Player & Game State
   const [balance, setBalance] = useState<number>(1000);
-  const [betAmount, setBetAmount] = useState<number>(50);
+  const [betAmount, setBetAmount] = useState<number>(10);
   const [isFlipping, setIsFlipping] = useState<boolean>(false);
   const [targetFace, setTargetFace] = useState<Choice>("HEADS");
   const [selectedChoice, setSelectedChoice] = useState<Choice | null>(null);
@@ -33,6 +40,29 @@ export function CoinFlipApp() {
   const [isMuted, setIsMuted] = useState<boolean>(false);
   const [history, setHistory] = useState<FlipRecord[]>([]);
   const [showRulesModal, setShowRulesModal] = useState<boolean>(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  // House Treasury State
+  const [house, setHouse] = useState<HouseState>({
+    bankroll: 500,
+    minBet: 1,
+    maxBet: 25,
+  });
+
+  // Fetch initial House Treasury state from API
+  const fetchHouseState = useCallback(async () => {
+    try {
+      const res = await fetch("/api/house");
+      if (res.ok) {
+        const data: HouseState = await res.json();
+        setHouse(data);
+      }
+    } catch {}
+  }, []);
+
+  useEffect(() => {
+    fetchHouseState();
+  }, [fetchHouseState]);
 
   // Trigger celebration confetti on Win
   const triggerWinConfetti = useCallback(() => {
@@ -71,78 +101,106 @@ export function CoinFlipApp() {
         decay: 0.92,
         scalar: 1.2,
       });
-    } catch {
-      // Gracefully handle any canvas confetti error
-    }
+    } catch {}
   }, []);
 
-  // MASTER COIN FLIP HANDLER
+  // MASTER COIN FLIP HANDLER (Calls /api/flip)
   const handleFlip = useCallback(
-    (choice: Choice) => {
+    async (choice: Choice) => {
       if (isFlipping) return;
-      if (betAmount > balance || betAmount <= 0) return;
 
+      // Client-side quick checks
+      if (betAmount < house.minBet) {
+        setErrorMessage(`Minimum bet is currently ${house.minBet} USDT.`);
+        return;
+      }
+      if (betAmount > house.maxBet) {
+        setErrorMessage(`Maximum bet is currently ${house.maxBet} USDT.`);
+        return;
+      }
+      if (betAmount > balance) {
+        setErrorMessage("Wager exceeds your current balance.");
+        return;
+      }
+
+      setErrorMessage(null);
       soundEngine.playClick();
       setIsFlipping(true);
       setSelectedChoice(choice);
       setOutcome(null);
 
-      // Deduct wager immediately from balance when button is clicked
-      setBalance((prev) => prev - betAmount);
-
-      // Play coin whirring audio
+      // Deduct wager immediately when button is clicked
+      setBalance((prev) => Number((prev - betAmount).toFixed(2)));
       soundEngine.playFlipSpin();
 
-      // Cryptographically secure 50/50 fair result
-      const cryptoArray = new Uint32Array(1);
-      window.crypto.getRandomValues(cryptoArray);
-      const isLandedHeads = cryptoArray[0] % 2 === 0;
-      const landedResult: Choice = isLandedHeads ? "HEADS" : "TAILS";
+      try {
+        const res = await fetch("/api/flip", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ betAmount, choice }),
+        });
 
-      setTargetFace(landedResult);
+        const data = await res.json();
 
-      // Animation finishes after 1600ms
-      setTimeout(() => {
-        setIsFlipping(false);
-
-        const didWin = choice === landedResult;
-        const payout = didWin ? betAmount * 2 : 0;
-
-        if (didWin) {
-          setOutcome("WIN");
-          setBalance((prev) => prev + payout);
-          setStreak((prev) => {
-            const next = prev + 1;
-            if (next > bestStreak) setBestStreak(next);
-            return next;
-          });
-          soundEngine.playWin();
-          triggerWinConfetti();
-        } else {
-          setOutcome("LOSE");
-          setStreak(0);
-          soundEngine.playLose();
+        if (!res.ok) {
+          setIsFlipping(false);
+          setErrorMessage(data.error || "Failed to settle bet.");
+          setBalance((prev) => Number((prev + betAmount).toFixed(2))); // Refund player on error
+          return;
         }
 
-        // Add record to flip history log
-        const newRecord: FlipRecord = {
-          id: `${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
-          choice,
-          result: landedResult,
-          outcome: didWin ? "WIN" : "LOSE",
-          wager: betAmount,
-          payout,
-          timestamp: new Date().toLocaleTimeString([], {
-            hour: "2-digit",
-            minute: "2-digit",
-            second: "2-digit",
-          }),
-        };
+        const landedResult: Choice = data.result;
+        setTargetFace(landedResult);
 
-        setHistory((prev) => [newRecord, ...prev]);
-      }, 1600);
+        setTimeout(() => {
+          setIsFlipping(false);
+          const didWin = data.won;
+          const payout = data.payout;
+
+          // Update House Treasury state automatically
+          if (data.house) {
+            setHouse(data.house);
+          }
+
+          if (didWin) {
+            setOutcome("WIN");
+            setBalance((prev) => Number((prev + payout).toFixed(2)));
+            setStreak((prev) => {
+              const next = prev + 1;
+              if (next > bestStreak) setBestStreak(next);
+              return next;
+            });
+            soundEngine.playWin();
+            triggerWinConfetti();
+          } else {
+            setOutcome("LOSE");
+            setStreak(0);
+            soundEngine.playLose();
+          }
+
+          const newRecord: FlipRecord = {
+            id: `${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+            choice,
+            result: landedResult,
+            outcome: didWin ? "WIN" : "LOSE",
+            wager: betAmount,
+            payout,
+            timestamp: new Date().toLocaleTimeString([], {
+              hour: "2-digit",
+              minute: "2-digit",
+              second: "2-digit",
+            }),
+          };
+
+          setHistory((prev) => [newRecord, ...prev]);
+        }, 1500);
+      } catch {
+        setIsFlipping(false);
+        setErrorMessage("Network error connecting to House Treasury.");
+        setBalance((prev) => Number((prev + betAmount).toFixed(2)));
+      }
     },
-    [isFlipping, betAmount, balance, bestStreak, triggerWinConfetti]
+    [isFlipping, betAmount, balance, house.minBet, house.maxBet, bestStreak, triggerWinConfetti]
   );
 
   // Keyboard shortcut listener ('H' for Heads, 'T' for Tails)
@@ -163,15 +221,31 @@ export function CoinFlipApp() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [handleFlip]);
 
-  // Balance reload & reset helpers
+  // Player balance reload
   const handleTopUp = () => {
     soundEngine.playClick();
-    setBalance((prev) => prev + 500);
+    setBalance((prev) => Number((prev + 500).toFixed(2)));
   };
 
   const handleResetBalance = () => {
     soundEngine.playClick();
     setBalance(1000);
+  };
+
+  // Admin Quick Deposit into House Treasury for testing
+  const handleHouseDeposit = async (amount: number) => {
+    soundEngine.playClick();
+    try {
+      const res = await fetch("/api/house/deposit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ amount }),
+      });
+      if (res.ok) {
+        const updated = await res.json();
+        setHouse(updated);
+      }
+    } catch {}
   };
 
   const toggleSound = () => {
@@ -192,19 +266,20 @@ export function CoinFlipApp() {
 
             <div className="space-y-3 text-sm text-slate-300 leading-relaxed">
               <p>
-                1. <strong className="text-white">Choose Your Wager:</strong> Pick any amount up to your current balance.
+                1. <strong className="text-white">Dynamic Max Bet:</strong> The maximum bet is always{" "}
+                <strong className="text-amber-400">5% of House Treasury Bankroll</strong>.
               </p>
               <p>
-                2. <strong className="text-white">Pick Heads or Tails:</strong> Click the <span className="text-amber-400 font-bold">FLIP HEADS</span> or <span className="text-slate-200 font-bold">FLIP TAILS</span> button to immediately launch the coin.
+                2. <strong className="text-white">Pick Heads or Tails:</strong> Click the{" "}
+                <span className="text-amber-400 font-bold">FLIP HEADS</span> or{" "}
+                <span className="text-slate-200 font-bold">FLIP TAILS</span> button to launch the coin.
               </p>
               <p>
-                3. <strong className="text-emerald-400">If You Win:</strong> Your wager is <strong className="text-white">DOUBLED (2× payout)</strong> and credited to your balance instantly!
+                3. <strong className="text-emerald-400">If You Win:</strong> You receive a{" "}
+                <strong className="text-white">1.98× payout multiplier</strong> credited instantly!
               </p>
               <p>
-                4. <strong className="text-rose-400">If You Lose:</strong> You keep nothing ($0.00) from that flip wager.
-              </p>
-              <p>
-                5. <strong className="text-amber-300">Never Run Out:</strong> You can click <strong className="text-white">+ Add $500</strong> anytime to reload your demo bankroll.
+                4. <strong className="text-rose-400">If You Lose:</strong> Your wager is absorbed into the House Treasury, which automatically increases the maximum betting limit for future games.
               </p>
             </div>
 
@@ -223,7 +298,7 @@ export function CoinFlipApp() {
 
       {/* HEADER NAV */}
       <header className="sticky top-0 z-40 border-b border-slate-800/80 bg-slate-950/70 backdrop-blur-xl">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-3.5 flex items-center justify-between">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-3.5 flex flex-wrap items-center justify-between gap-3">
           {/* Logo */}
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center shadow-lg shadow-amber-500/20">
@@ -235,17 +310,40 @@ export function CoinFlipApp() {
                   AETHER FLIP
                 </span>
                 <span className="text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/40 px-2 py-0.5 rounded-full font-bold uppercase tracking-wide">
-                  2× PAYOUT
+                  1.98× PAYOUT
                 </span>
               </div>
               <p className="text-[11px] text-slate-400 hidden sm:block">
-                Provably Fair • Double or Nothing Coin Flip
+                House Treasury Bankroll Management System
               </p>
             </div>
           </div>
 
           {/* Right Header Actions */}
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+            {/* HOUSE TREASURY PILL */}
+            <div className="flex items-center gap-2 bg-slate-900/90 border border-amber-500/30 rounded-2xl p-1.5 px-3 shadow-md">
+              <Landmark className="w-4 h-4 text-amber-400" />
+              <div className="text-xs">
+                <span className="text-slate-400 mr-1">House:</span>
+                <span className="font-extrabold text-amber-300">
+                  ${house.bankroll.toFixed(2)} USDT
+                </span>
+              </div>
+              <div className="text-[10px] bg-slate-800 px-1.5 py-0.5 rounded text-slate-300 border border-slate-700">
+                Max Bet: ${house.maxBet}
+              </div>
+              <button
+                type="button"
+                onClick={() => handleHouseDeposit(500)}
+                disabled={isFlipping}
+                className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/30 transition-colors"
+                title="Admin: Deposit +500 USDT into House Bankroll"
+              >
+                +500
+              </button>
+            </div>
+
             {/* Streak indicator */}
             {streak > 0 && (
               <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-300 text-xs font-bold">
@@ -259,7 +357,7 @@ export function CoinFlipApp() {
               <div className="flex items-center gap-2">
                 <Wallet className="w-4 h-4 text-emerald-400" />
                 <div className="text-xs">
-                  <span className="text-slate-400 block sm:inline mr-1">Balance:</span>
+                  <span className="text-slate-400 block sm:inline mr-1">Player:</span>
                   <span className="font-extrabold text-white text-sm">
                     ${balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </span>
@@ -317,14 +415,13 @@ export function CoinFlipApp() {
         {/* Hero Headline */}
         <div className="text-center mb-6">
           <h1 className="text-3xl sm:text-4xl md:text-5xl font-black text-white tracking-tight">
-            Flip The Coin.{" "}
+            Flip Against The House.{" "}
             <span className="bg-gradient-to-r from-amber-400 via-amber-300 to-emerald-400 bg-clip-text text-transparent">
-              Double Your Money.
+              1.98× Instant Settlement.
             </span>
           </h1>
           <p className="text-slate-400 text-sm sm:text-base max-w-xl mx-auto mt-2">
-            Choose <strong className="text-amber-400">Heads</strong> or{" "}
-            <strong className="text-slate-200">Tails</strong> below. Win to double your wager instantly, or lose and keep nothing.
+            Dynamic Max Bet is automatically backed by <strong className="text-amber-400">5% of House Treasury Bankroll</strong>.
           </p>
         </div>
 
@@ -341,8 +438,11 @@ export function CoinFlipApp() {
           betAmount={betAmount}
           setBetAmount={setBetAmount}
           balance={balance}
+          minBet={house.minBet}
+          maxBet={house.maxBet}
           isFlipping={isFlipping}
           onFlip={handleFlip}
+          errorMessage={errorMessage}
         />
 
         {/* Flip History & Provably Fair Audit Log */}
@@ -355,9 +455,9 @@ export function CoinFlipApp() {
           <div className="flex items-center gap-2">
             <span className="font-bold text-slate-300">AETHER FLIP</span>
             <span>•</span>
-            <span>Provably Fair 50/50 RNG</span>
+            <span>House Treasury System</span>
             <span>•</span>
-            <span>Instant 2× Payouts</span>
+            <span>1.98× Payout Multiplier</span>
           </div>
           <div className="text-slate-400">
             Press <code className="bg-slate-800 px-1.5 py-0.5 rounded text-amber-300 font-mono">[H]</code> for Heads or{" "}

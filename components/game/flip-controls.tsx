@@ -1,39 +1,47 @@
 "use client";
 
 import React from "react";
-import { Crown, Shield, Coins, ArrowUpRight, AlertCircle } from "lucide-react";
+import { Crown, Shield, Coins, ArrowUpRight, AlertCircle, ShieldAlert } from "lucide-react";
 import type { Choice } from "./coin-3d";
 
-const QUICK_CHIPS = [10, 25, 50, 100, 250, 500];
+const QUICK_CHIPS = [1, 5, 10, 25, 50, 100, 250];
 
 interface FlipControlsProps {
   betAmount: number;
   setBetAmount: (amount: number) => void;
   balance: number;
+  minBet: number;
+  maxBet: number;
   isFlipping: boolean;
   onFlip: (choice: Choice) => void;
+  errorMessage?: string | null;
 }
 
 export function FlipControls({
   betAmount,
   setBetAmount,
   balance,
+  minBet,
+  maxBet,
   isFlipping,
   onFlip,
+  errorMessage,
 }: FlipControlsProps) {
   const isInsufficient = betAmount > balance;
-  const isInvalid = betAmount <= 0 || isNaN(betAmount);
+  const isBelowMin = betAmount < minBet;
+  const isAboveMax = betAmount > maxBet;
+  const isInvalid = isNaN(betAmount) || betAmount <= 0 || isBelowMin || isAboveMax || isInsufficient;
 
   const handleHalf = () => {
-    setBetAmount(Math.max(1, Math.floor(betAmount / 2)));
+    setBetAmount(Math.max(minBet, Math.floor(betAmount / 2)));
   };
 
   const handleDouble = () => {
-    setBetAmount(Math.min(balance, betAmount * 2));
+    setBetAmount(Math.min(maxBet, betAmount * 2));
   };
 
-  const handleMax = () => {
-    setBetAmount(balance);
+  const handleMaxLimit = () => {
+    setBetAmount(Math.min(balance, maxBet));
   };
 
   return (
@@ -41,14 +49,22 @@ export function FlipControls({
       {/* 1. BET AMOUNT SELECTION PANEL */}
       <div className="glass-panel rounded-2xl p-5 border border-slate-700/60 shadow-xl">
         <div className="flex items-center justify-between mb-3">
-          <label className="text-xs uppercase tracking-wider font-bold text-slate-400 flex items-center gap-1.5">
-            <Coins className="w-3.5 h-3.5 text-amber-400" />
-            <span>Wager Amount</span>
-          </label>
+          <div className="flex items-center gap-2">
+            <label className="text-xs uppercase tracking-wider font-bold text-slate-400 flex items-center gap-1.5">
+              <Coins className="w-3.5 h-3.5 text-amber-400" />
+              <span>Wager Amount (USDT)</span>
+            </label>
+            <span className="text-[11px] px-2 py-0.5 rounded-full bg-slate-800 border border-slate-700 text-amber-300 font-mono">
+              Limits: ${minBet} - ${maxBet}
+            </span>
+          </div>
           <div className="text-xs font-semibold text-slate-300">
-            Potential Win:{" "}
+            Payout (1.98x):{" "}
             <span className="text-emerald-400 font-bold">
-              ${(isInvalid ? 0 : betAmount * 2).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              ${(isNaN(betAmount) || betAmount <= 0 ? 0 : betAmount * 1.98).toLocaleString(undefined, {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+              })}
             </span>
           </div>
         </div>
@@ -61,8 +77,9 @@ export function FlipControls({
             </span>
             <input
               type="number"
-              min="1"
-              max={balance}
+              min={minBet}
+              max={maxBet}
+              step="any"
               value={betAmount || ""}
               disabled={isFlipping}
               onChange={(e) => {
@@ -70,7 +87,7 @@ export function FlipControls({
                 setBetAmount(isNaN(val) ? 0 : val);
               }}
               className="w-full bg-slate-900/80 border border-slate-700 focus:border-amber-500 rounded-xl py-3 pl-8 pr-4 font-bold text-lg text-white outline-none transition-all disabled:opacity-50"
-              placeholder="Enter amount..."
+              placeholder="Enter USDT..."
             />
           </div>
 
@@ -94,23 +111,24 @@ export function FlipControls({
             <button
               type="button"
               disabled={isFlipping}
-              onClick={handleMax}
+              onClick={handleMaxLimit}
               className="px-3.5 py-3 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 text-xs font-bold border border-amber-500/40 transition-colors disabled:opacity-40"
+              title={`Set to dynamic Max Bet limit ($${maxBet})`}
             >
-              MAX
+              MAX ({maxBet})
             </button>
           </div>
         </div>
 
         {/* Quick chip buttons */}
         <div className="flex flex-wrap items-center gap-2">
-          {QUICK_CHIPS.map((chip) => (
+          {QUICK_CHIPS.filter((chip) => chip <= maxBet || chip === 10 || chip === 25).map((chip) => (
             <button
               key={chip}
               type="button"
               disabled={isFlipping}
               onClick={() => setBetAmount(chip)}
-              className={`flex-1 min-w-[64px] py-2 rounded-lg text-xs font-bold border transition-all ${
+              className={`flex-1 min-w-[56px] py-2 rounded-lg text-xs font-bold border transition-all ${
                 betAmount === chip
                   ? "bg-amber-500 text-slate-950 border-amber-400 shadow-md shadow-amber-500/20 scale-105"
                   : "bg-slate-900/60 hover:bg-slate-800 text-slate-300 border-slate-700/80"
@@ -121,10 +139,32 @@ export function FlipControls({
           ))}
         </div>
 
-        {isInsufficient && (
+        {/* Error / Validation Feedback */}
+        {errorMessage && (
+          <div className="mt-3 flex items-center gap-2 text-rose-400 text-xs font-semibold bg-rose-500/10 border border-rose-500/30 rounded-lg p-2.5">
+            <ShieldAlert className="w-4 h-4 shrink-0" />
+            <span>{errorMessage}</span>
+          </div>
+        )}
+
+        {!errorMessage && isAboveMax && (
           <div className="mt-3 flex items-center gap-2 text-rose-400 text-xs font-semibold bg-rose-500/10 border border-rose-500/30 rounded-lg p-2.5">
             <AlertCircle className="w-4 h-4 shrink-0" />
-            <span>Wager exceeds your current balance of ${balance.toFixed(2)}. Top up or lower bet amount.</span>
+            <span>Maximum bet is currently {maxBet} USDT (5% of House Bankroll).</span>
+          </div>
+        )}
+
+        {!errorMessage && isBelowMin && (
+          <div className="mt-3 flex items-center gap-2 text-rose-400 text-xs font-semibold bg-rose-500/10 border border-rose-500/30 rounded-lg p-2.5">
+            <AlertCircle className="w-4 h-4 shrink-0" />
+            <span>Minimum bet is currently {minBet} USDT.</span>
+          </div>
+        )}
+
+        {!errorMessage && isInsufficient && (
+          <div className="mt-3 flex items-center gap-2 text-rose-400 text-xs font-semibold bg-rose-500/10 border border-rose-500/30 rounded-lg p-2.5">
+            <AlertCircle className="w-4 h-4 shrink-0" />
+            <span>Wager exceeds your current balance of ${balance.toFixed(2)} USDT.</span>
           </div>
         )}
       </div>
@@ -134,11 +174,10 @@ export function FlipControls({
         {/* HEADS BUTTON */}
         <button
           type="button"
-          disabled={isFlipping || isInsufficient || isInvalid}
+          disabled={isFlipping || isInvalid}
           onClick={() => onFlip("HEADS")}
           className="group relative overflow-hidden rounded-2xl p-6 transition-all duration-300 glass-panel-gold hover:scale-[1.02] active:scale-95 disabled:opacity-50 disabled:pointer-events-none focus:outline-none focus:ring-2 focus:ring-amber-400 shadow-xl"
         >
-          {/* Subtle hover gradient bloom */}
           <div className="absolute inset-0 bg-gradient-to-br from-amber-500/10 via-transparent to-amber-500/20 opacity-0 group-hover:opacity-100 transition-opacity" />
 
           <div className="relative z-10 flex items-center justify-between">
@@ -157,7 +196,9 @@ export function FlipControls({
                 </div>
                 <div className="text-xs text-slate-300 mt-1 flex items-center gap-1">
                   <span>Bet ${betAmount || 0}</span>
-                  <span className="text-amber-400 font-bold">→ Win ${(betAmount * 2) || 0}</span>
+                  <span className="text-amber-400 font-bold">
+                    → Win ${(isNaN(betAmount) ? 0 : betAmount * 1.98).toFixed(2)}
+                  </span>
                 </div>
               </div>
             </div>
@@ -171,11 +212,10 @@ export function FlipControls({
         {/* TAILS BUTTON */}
         <button
           type="button"
-          disabled={isFlipping || isInsufficient || isInvalid}
+          disabled={isFlipping || isInvalid}
           onClick={() => onFlip("TAILS")}
           className="group relative overflow-hidden rounded-2xl p-6 transition-all duration-300 glass-panel-silver hover:scale-[1.02] active:scale-95 disabled:opacity-50 disabled:pointer-events-none focus:outline-none focus:ring-2 focus:ring-slate-300 shadow-xl"
         >
-          {/* Subtle hover gradient bloom */}
           <div className="absolute inset-0 bg-gradient-to-br from-slate-400/10 via-transparent to-slate-400/20 opacity-0 group-hover:opacity-100 transition-opacity" />
 
           <div className="relative z-10 flex items-center justify-between">
@@ -194,7 +234,9 @@ export function FlipControls({
                 </div>
                 <div className="text-xs text-slate-300 mt-1 flex items-center gap-1">
                   <span>Bet ${betAmount || 0}</span>
-                  <span className="text-slate-200 font-bold">→ Win ${(betAmount * 2) || 0}</span>
+                  <span className="text-slate-200 font-bold">
+                    → Win ${(isNaN(betAmount) ? 0 : betAmount * 1.98).toFixed(2)}
+                  </span>
                 </div>
               </div>
             </div>
